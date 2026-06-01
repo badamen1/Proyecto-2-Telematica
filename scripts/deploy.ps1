@@ -160,8 +160,9 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 EOF
 set -a && source /opt/proyecto-asg/.env && set +a
-nohup python3 -m monitor_s.collector > /var/log/monitor_s.log 2>&1 &
-nohup python3 -m controller_asg.controller > /var/log/controller_asg.log 2>&1 &
+export PYTHONUNBUFFERED=1
+nohup python3 -u -m monitor_s.collector > /var/log/monitor_s.log 2>&1 &
+nohup python3 -u -m controller_asg.controller > /var/log/controller_asg.log 2>&1 &
 echo '=== CENTRAL SETUP COMPLETE ==='
 "@
 
