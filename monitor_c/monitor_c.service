@@ -5,7 +5,8 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/proyecto-asg
-ExecStart=/usr/bin/python3 /opt/proyecto-asg/monitor_c/server.py
+Environment=PYTHONPATH=/opt/proyecto-asg
+ExecStart=/usr/bin/python3 -u -m monitor_c.server
 Restart=always
 RestartSec=5
 StandardOutput=journal
