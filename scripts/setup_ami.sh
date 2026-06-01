@@ -14,7 +14,7 @@ git clone https://github.com/badamen1/Proyecto-2-Telematica.git .
 pip3 install grpcio==1.66.2 grpcio-tools==1.66.2 redis==5.0.1 boto3==1.34.0 python-dotenv==1.0.1
 
 # ── Generar stubs gRPC ──
-python3 -m grpc_tools.protoc -I proto --python_out=proto --grpc_python_out=proto proto/monitor.proto
+# Los stubs gRPC ya estan en el repo con imports relativos correctos - NO regenerar
 
 # ── Instalar servicio systemd de MonitorC ──
 cp monitor_c/monitor_c.service /etc/systemd/system/
