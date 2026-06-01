@@ -1,0 +1,15 @@
+[Unit]
+Description=MonitorC gRPC Agent
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/proyecto-asg
+ExecStart=/usr/bin/python3 /opt/proyecto-asg/monitor_c/server.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

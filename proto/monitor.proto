@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+service MonitorService {
+  rpc Ping (PingRequest) returns (PongResponse);
+  rpc GetLoad (LoadRequest) returns (LoadResponse);
+}
+
+message PingRequest {}
+
+message PongResponse {
+  string ip = 1;
+  int64 timestamp = 2;
+  float load = 3;
+}
+
+message LoadRequest {}
+
+message LoadResponse {
+  float load = 1;
+}
