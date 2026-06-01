@@ -124,6 +124,24 @@ def scale_in(ec2_client, elbv2_client, redis_client, instances: list, target_gro
         print(f'[ERROR] Scale-in failed: {e}')
 
 
+def _count_ec2_app_instances(ec2_client) -> int:
+    """Cuenta las instancias EC2 con tag Role=AppInstance en estado running o pending."""
+    try:
+        response = ec2_client.describe_instances(
+            Filters=[
+                {'Name': 'tag:Role', 'Values': ['AppInstance']},
+                {'Name': 'instance-state-name', 'Values': ['running', 'pending']},
+            ]
+        )
+        count = 0
+        for reservation in response['Reservations']:
+            count += len(reservation['Instances'])
+        return count
+    except Exception as e:
+        print(f'[ERROR] Failed to count EC2 instances: {e}')
+        return 0
+
+
 def run(ec2_client, elbv2_client, redis_client, target_group_arn: str, monitor_s_ip: str) -> None:
     """
     Metodo principal que ejecuta el ciclo de control. En cada iteración, obtiene el estado de la flota,
@@ -136,17 +154,27 @@ def run(ec2_client, elbv2_client, redis_client, target_group_arn: str, monitor_s
             fleet = get_fleet_state(redis_client)
             fleet_size = len(fleet)
 
-            # Bootstrapping: si la flota está por debajo del mínimo, escalar sin importar carga ni cooldown
-            if fleet_size < MIN_INSTANCES:
-                needed = MIN_INSTANCES - fleet_size
-                print(f'[INFO] Fleet below minimum ({fleet_size}/{MIN_INSTANCES}), launching {needed} instance(s)')
+            # Bootstrapping: consultar EC2 directamente para saber cuantas instancias
+            # existen (running + pending), porque Redis no tiene datos hasta que MonitorC responda
+            ec2_count = _count_ec2_app_instances(ec2_client)
+
+            if ec2_count < MIN_INSTANCES:
+                needed = MIN_INSTANCES - ec2_count
+                print(f'[INFO] EC2 fleet below minimum ({ec2_count}/{MIN_INSTANCES}), launching {needed} instance(s)')
                 for _ in range(needed):
                     scale_out(ec2_client, elbv2_client, redis_client, target_group_arn, monitor_s_ip)
+                # Esperar mas tiempo despues del bootstrap para que las instancias arranquen
+                set_cooldown(redis_client)
+                time.sleep(CYCLE_INTERVAL)
+                continue
+
+            if not fleet:
+                print(f'[INFO] {ec2_count} EC2 instances exist but not yet in Redis, waiting for MonitorC...')
                 time.sleep(CYCLE_INTERVAL)
                 continue
 
             avg_load = sum(i['load'] for i in fleet) / len(fleet)
-            print(f'[INFO] avg_load={avg_load:.1f}% fleet_size={fleet_size}')
+            print(f'[INFO] avg_load={avg_load:.1f}% fleet_size={fleet_size} ec2_count={ec2_count}')
 
             if is_cooldown_active(redis_client):
                 print('[INFO] Cooldown active, skipping')
