@@ -134,13 +134,18 @@ def run(ec2_client, elbv2_client, redis_client, target_group_arn: str, monitor_s
     while True:
         try:
             fleet = get_fleet_state(redis_client)
-            if not fleet:
-                print('[INFO] No instances in Redis, waiting')
+            fleet_size = len(fleet)
+
+            # Bootstrapping: si la flota está por debajo del mínimo, escalar sin importar carga ni cooldown
+            if fleet_size < MIN_INSTANCES:
+                needed = MIN_INSTANCES - fleet_size
+                print(f'[INFO] Fleet below minimum ({fleet_size}/{MIN_INSTANCES}), launching {needed} instance(s)')
+                for _ in range(needed):
+                    scale_out(ec2_client, elbv2_client, redis_client, target_group_arn, monitor_s_ip)
                 time.sleep(CYCLE_INTERVAL)
                 continue
 
             avg_load = sum(i['load'] for i in fleet) / len(fleet)
-            fleet_size = len(fleet)
             print(f'[INFO] avg_load={avg_load:.1f}% fleet_size={fleet_size}')
 
             if is_cooldown_active(redis_client):
