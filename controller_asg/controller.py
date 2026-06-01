@@ -66,7 +66,7 @@ def scale_out(ec2_client, elbv2_client, redis_client, target_group_arn: str, mon
         #Usamos por defectos la AMI de Amazon Linux 2
         response = ec2_client.run_instances(
             ImageId=AMI_ID,
-            InstanceType='t2.micro',
+            InstanceType='t3.micro',
             KeyName=KEY_NAME,
             MinCount=1,
             MaxCount=1,
